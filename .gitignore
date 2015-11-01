@@ -1,0 +1,13 @@
+*.swp
+*.native
+*.byte
+_build
+bootvar_gen.ml
+Makefile
+*.xe
+*.xl
+*.xl.in
+mir-stackv4
+main.ml
+log
+stackv4_libvirt.xml
