@@ -11,3 +11,5 @@ mir-stackv4
 main.ml
 log
 stackv4_libvirt.xml
+mir-stackv4.xen
+key_gen.ml

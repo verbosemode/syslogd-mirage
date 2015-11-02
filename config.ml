@@ -22,4 +22,6 @@ let stack =
   | `Socket, _     -> socket_stackv4 default_console [Ipaddr.V4.any]
 
 let () =
+  add_to_opam_packages["syslog-message"];
+  add_to_ocamlfind_libraries["syslog-message"];
   register "stackv4" [handler $ default_console $ stack]
