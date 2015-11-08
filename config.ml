@@ -1,6 +1,6 @@
 open Mirage
 
-let handler = foreign "Unikernel.Main" (console @-> stackv4 @-> job)
+let handler = foreign "Unikernel.Main" (console @-> stackv4 @-> clock @-> job)
 
 let net =
   try match Sys.getenv "NET" with
@@ -24,4 +24,4 @@ let stack =
 let () =
   add_to_opam_packages["syslog-message"];
   add_to_ocamlfind_libraries["syslog-message"];
-  register "stackv4" [handler $ default_console $ stack]
+  register "stackv4" [handler $ default_console $ stack $ default_clock]
