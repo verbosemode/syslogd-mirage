@@ -14,13 +14,17 @@ module Main (C:CONSOLE) (S:STACKV4) (Clock:V1.CLOCK) = struct
       fun ~src ~dst ~src_port buf ->
         (* FIXME Warning 40 - was selected from ... not visible ... *)
         let now = Clock.gmtime (Clock.time ()) in
-        let ctx = {Syslog_message.hostname=(Ipaddr.V4.to_string src);
-          timestamp={Syslog_message.month=(now.tm_mon + 1); day=now.tm_mday;
-            hour=now.tm_hour; minute=now.tm_min; second=now.tm_sec};
-                   set_hostname=false} in
-        match Syslog_message.parse ~ctx (Cstruct.to_string buf) with
-          None -> C.log_s console (red "Failed: %s" (Cstruct.to_string buf))
-        | Some msg -> C.log_s console (green "%s" (Syslog_message.pp_string msg))
+        match (Ptime.of_date_time ((now.tm_year, (now.tm_mon + 1), now.tm_mday), ((now.tm_hour, now.tm_min, now.tm_sec), 0))) with
+        | Some ts ->
+            let ctx = {timestamp=ts;
+              Syslog_message.hostname=(Ipaddr.V4.to_string src);
+              set_hostname=false}
+            in
+            begin match Syslog_message.parse ~ctx (Cstruct.to_string buf) with
+            | None -> C.log_s console (red "Failed: %s" (Cstruct.to_string buf))
+            | Some msg -> C.log_s console (green "%s" (Syslog_message.pp_string msg))
+            end
+        | None -> C.log_s console (red "Failed / Invalid timestamp: %s" (Cstruct.to_string buf))
     );
 
     S.listen s
