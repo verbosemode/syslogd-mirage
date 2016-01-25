@@ -24,4 +24,4 @@ let stack =
 let () =
   add_to_opam_packages["syslog-message"];
   add_to_ocamlfind_libraries["syslog-message"];
-  register "stackv4" [handler $ default_console $ stack $ default_clock]
+  register "syslogd" [handler $ default_console $ stack $ default_clock]
