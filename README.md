@@ -13,9 +13,11 @@ The ports is hardcoded to 5514 at the moment to not interfere with local running
 
 # Testing
 
-* Until syslog-message gets a command line client
-
 	$ logger --port 5514 --server 127.0.0.1 -p mail.emerg -t server001 "foobar"
+
+	or
+
+	$ logger --port 5514 --rfc3164 --server 127.0.0.1 -p mail.emerg -t server001 "foobar"
 
 # TODO
 
