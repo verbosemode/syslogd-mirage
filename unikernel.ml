@@ -8,14 +8,15 @@ let yellow fmt = sprintf ("\027[33m"^^fmt^^"\027[m")
 let blue fmt   = sprintf ("\027[36m"^^fmt^^"\027[m")
 
 module Main (C:CONSOLE) (S:STACKV4) (Clock:V1.CLOCK) = struct
-  let timestamp_now () = Clock.gmtime (Clock.time ())
+  let timestamp_now () =
+    let now = Clock.gmtime (Clock.time ()) in
+    let open Clock in
+      (now.tm_year, (now.tm_mon + 1), now.tm_mday), ((now.tm_hour, now.tm_min, now.tm_sec), 0)
 
   let start console s c =
     let local_port = 5514 in
-    S.listen_udpv4 s local_port (fun ~src ~dst ~src_port buf ->
-        let now = timestamp_now () in
-        let open Clock in
-        match (Ptime.of_date_time ((now.tm_year, (now.tm_mon + 1), now.tm_mday), ((now.tm_hour, now.tm_min, now.tm_sec), 0))) with
+    S.listen_udpv4 s ~port:local_port (fun ~src ~dst ~src_port buf ->
+        match Ptime.of_date_time (timestamp_now ()) with
         | Some ts ->
             let ctx = {timestamp=ts;
               Syslog_message.hostname=(Ipaddr.V4.to_string src);
