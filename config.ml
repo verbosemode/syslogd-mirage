@@ -1,27 +1,17 @@
 open Mirage
 
-let handler = foreign "Unikernel.Main" (console @-> stackv4 @-> clock @-> job)
+let stack = generic_stackv4 default_console tap0
 
-let net =
-  try match Sys.getenv "NET" with
-    | "direct" -> `Direct
-    | "socket" -> `Socket
-    | _        -> `Direct
-  with Not_found -> `Direct
+let port =
+  let doc = Key.Arg.info ~doc:"Listening port" ["p" ; "port" ] in
+    Key.(create "port" Arg.(opt ~stage:`Both int 514 doc))
 
-let dhcp =
-  try match Sys.getenv "DHCP" with
-    | "" -> false
-    | _  -> true
-  with Not_found -> false
-
-let stack =
-  match net, dhcp with
-  | `Direct, true  -> direct_stackv4_with_dhcp default_console tap0
-  | `Direct, false -> direct_stackv4_with_default_ipv4 default_console tap0
-  | `Socket, _     -> socket_stackv4 default_console [Ipaddr.V4.any]
+let main =
+  foreign
+    ~keys:[Key.abstract port]
+    "Unikernel.Main" (console @-> stackv4 @-> clock @-> job)
 
 let () =
   add_to_opam_packages["syslog-message"];
   add_to_ocamlfind_libraries["syslog-message"];
-  register "syslogd" [handler $ default_console $ stack $ default_clock]
+  register "syslogd" [main $ default_console $ stack $ default_clock]

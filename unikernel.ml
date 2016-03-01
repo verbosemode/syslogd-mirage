@@ -14,7 +14,7 @@ module Main (C:CONSOLE) (S:STACKV4) (Clock:V1.CLOCK) = struct
       (now.tm_year, (now.tm_mon + 1), now.tm_mday), ((now.tm_hour, now.tm_min, now.tm_sec), 0)
 
   let start console s c =
-    let local_port = 5514 in
+    let local_port = (Key_gen.port ()) in
     S.listen_udpv4 s ~port:local_port (fun ~src ~dst ~src_port buf ->
         match Ptime.of_date_time (timestamp_now ()) with
         | Some ts ->
