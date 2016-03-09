@@ -2,12 +2,10 @@
 
 ... at least it should become one some day
 
-The ports is hardcoded to 5514 at the moment to not interfere with local running syslog daemons.
-
 # Installation
 
 	opam pin add syslog-message https://github.com/verbosemode/syslog-message
-	env NET=socket mirage configure --unix
+	env NET=socket mirage configure --unix --net=socket --port=5514
 	make
 	./main.native
 
@@ -21,7 +19,6 @@ The ports is hardcoded to 5514 at the moment to not interfere with local running
 
 # TODO
 
-* Allow to configure port number via environment variable
 * Store messages
   - Append to file?
   - Irmin?
