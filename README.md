@@ -4,7 +4,7 @@
 
 # Installation
 
-	opam pin add syslog-message https://github.com/verbosemode/syslog-message
+	opam pin add syslog-message https://github.com/verbosemode/syslog-message.git
 	mirage configure --unix --net=socket --port=5514
 	make
 	./main.native
