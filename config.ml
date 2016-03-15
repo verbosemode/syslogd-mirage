@@ -12,6 +12,6 @@ let main =
     "Unikernel.Main" (console @-> stackv4 @-> clock @-> job)
 
 let () =
-  add_to_opam_packages["syslog-message"];
-  add_to_ocamlfind_libraries["syslog-message"];
+  add_to_opam_packages["syslog-message"; "irmin"];
+  add_to_ocamlfind_libraries["syslog-message"; "irmin"];
   register "syslogd" [main $ default_console $ stack $ default_clock]
