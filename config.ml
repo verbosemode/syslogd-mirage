@@ -14,6 +14,6 @@ let main =
     "Unikernel.Main" (console @-> stackv4 @-> clock @-> resolver @-> conduit @-> job)
 
 let () =
-  add_to_opam_packages["syslog-message"; "irmin"; "lwt.ppx"; "decompress"];
+  add_to_opam_packages["syslog-message"; "irmin"; "lwt"; "decompress"];
   add_to_ocamlfind_libraries["syslog-message"; "irmin"; "irmin.git"; "irmin.mirage"; "irmin.mem"; "lwt.ppx"; "decompress"];
   register "syslogd" [main $ default_console $ stack $ default_clock $res_dns $ conduit_d]
