@@ -21,7 +21,7 @@
 
 # Testing
 
-        $ logger --port 5514 --server 127.0.0.1 -p mail.emerg -t server001 "foobar"
+    $ logger --port 5514 --server 127.0.0.1 -p mail.emerg -t server001 "foobar"
 
 	or
 
