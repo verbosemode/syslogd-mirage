@@ -1,6 +1,6 @@
 PKG lwt mirage mirage-types tcpip mirage-console
 PKG mirage-net-unix mirage-unix mirage-clock-unix
-PKG irmin.unix irmin
+PKG irmin decompress
 PKG syslog-message
 PKG ptime
 B **/_build/**

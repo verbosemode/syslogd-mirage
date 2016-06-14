@@ -1,57 +1,79 @@
-(**
-   Taken from https://github.com/Engil/Canopy/blob/de93e06e0a60608e5c1e9b2582db75612346cf82/inflator.ml
-   Special thanks to: @engil
-*)
-module IDBytes = struct
-    include Bytes
-    let concat = Bytes.concat
-    let of_bytes s = s
-    let to_bytes s = s
-  end
-module XInflator = Decompress.Inflate.Make(IDBytes)
-module XDeflator = Decompress.Deflate.Make(IDBytes)
+(* Taken from: https://raw.githubusercontent.com/Engil/Canopy/master/inflator.ml *)
 
-let inflate ?output_size buf =
-  let output = match output_size with
-    | None -> Bytes.create (Mstruct.length buf)
-    | Some n -> Bytes.create n
-  in
-  let inflator = XInflator.make (`String (0, (Mstruct.to_string buf))) output in
-  let rec eventually_inflate inflator acc =
-    match XInflator.eval inflator with
-    | `Ok n ->
-       let res = Bytes.unsafe_to_string (IDBytes.concat (Bytes.unsafe_of_string "") (List.rev acc)) in
-       Mstruct.shift buf n;
-       Some (Mstruct.of_string res)
-    | `Error -> None
-    | `Flush _ ->
-       match XInflator.contents inflator with
-       | 0 ->
-          let res = Bytes.unsafe_to_string (IDBytes.concat (Bytes.unsafe_of_string "") (List.rev acc)) in
-          Some (Mstruct.of_string res)
-       | _ ->
-          let tmp = Bytes.copy output in
-          XInflator.flush inflator;
-          eventually_inflate inflator (tmp :: acc)
-  in
-  eventually_inflate inflator []
+module Inflate = Decompress.Inflate.Make(Decompress.ExtString)(Decompress.ExtBytes)
+module Deflate = Decompress.Deflate.Make(Decompress.ExtString)(Decompress.ExtBytes)
 
-let deflate ?level buf =
-  ignore(level);
-  let output = Bytes.create 62 in
-  let deflator = XDeflator.make ~window_bits:15
-                                (`String (0, (Cstruct.to_string buf))) output in
-  let rec eventually_deflate deflator acc =
-    match XDeflator.eval deflator with
+let deflate ?level buff =
+  let len      = Cstruct.len buff in
+  let position = ref 0 in
+
+  let input  = Bytes.create 1024 in
+  let output = Bytes.create 1024 in
+  let buffer = Buffer.create (Cstruct.len buff) in
+
+  let refill' _ =
+    let n = min (len - !position) 1024 in
+    Cstruct.blit_to_bytes buff !position input 0 n;
+    position := !position + n;
+    if !position >= len then true, n else false, n
+  in
+
+  let flush' _ len =
+    Buffer.add_subbytes buffer output 0 len;
+    len
+  in
+
+  Deflate.compress ?level (Bytes.unsafe_to_string input) output refill' flush';
+  Cstruct.of_string (Buffer.contents buffer)
+
+let inflate ?output_size orig =
+  let buff = Mstruct.clone orig in
+  let output_size =
+    match output_size with
+    | None -> Mstruct.length orig
+    | Some s -> s
+  in
+  let input  = Bytes.create 1024 in
+  let output = Bytes.create 1024 in
+  let buffer = Buffer.create output_size in
+  let s      = ref 0 in
+
+  let inflater = Inflate.make (Bytes.unsafe_to_string input) output in
+
+  let refill' () =
+    let n = min (Mstruct.length buff) 1024 in
+    let i = Mstruct.get_string buff n in
+    Bytes.blit_string i 0 input 0 n;
+    n
+  in
+
+  let flush' len =
+    Buffer.add_subbytes buffer output 0 len;
+    len
+  in
+
+  let len = refill' () in
+  Inflate.refill inflater len;
+  Inflate.flush inflater 1024;
+
+  let rec aux () = match Inflate.eval inflater with
     | `Ok ->
-       let res = IDBytes.concat (Bytes.unsafe_of_string "") (List.rev acc) |> Bytes.unsafe_to_string in
-       Cstruct.of_string res
-    | `Error -> failwith "Error deflating an archive :("
+       let drop = flush' (Inflate.contents inflater) in
+       s := !s + Inflate.used_in inflater;
+       Inflate.flush inflater drop
     | `Flush ->
-       let n = Cstruct.len buf in
-       let tmp = Bytes.create n in
-       Bytes.blit output 0 tmp 0 n;
-       XDeflator.flush deflator;
-       eventually_deflate deflator (tmp :: acc)
+       let drop = flush' (Inflate.contents inflater) in
+       Inflate.flush inflater drop;
+       aux ()
+    | `Wait ->
+       let len = refill' () in
+       s := !s + Inflate.used_in inflater;
+       Inflate.refill inflater len;
+       aux ()
+    | `Error -> failwith "Inflate.inflate"
   in
-  eventually_deflate deflator []
+
+  try aux ();
+      Mstruct.shift orig !s;
+      Some (Mstruct.of_string (Buffer.contents buffer))
+  with _ -> None
