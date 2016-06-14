@@ -3,9 +3,6 @@
 ... at least it should become one some day
 
 # Installation
-	# You need the latest Decompress version from git
-	opam pin add decompress https://github.com/oklm-wsh/Decompress.git -y
-	
 	# Pin and Install syslog-message
 	opam update
 	opam install syslog-message
