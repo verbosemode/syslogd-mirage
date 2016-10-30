@@ -44,40 +44,38 @@ module Main (C:CONSOLE) (S:STACKV4) (Clock:V1.CLOCK) (RES: Resolver_lwt.S) (CON:
     let log_message msg =
       LoggerStore.Repo.create store_config >>= fun r ->
       LoggerStore.master task r >>= fun t ->
-      let pretty_msg = Syslog_message.pp_string msg in
+      let pretty_msg = Syslog_message.to_string msg in
       (* See comment below about format *)
-      LoggerStore.update (t "Logger") ["--"] pretty_msg >>
+      LoggerStore.update (t "Logger") ["--"] pretty_msg >>= fun () ->
       (* Right now, we're just printing the read value we added. *)
-      LoggerStore.read (t "Logger") ["--"] >>= fun value ->
-      match value with
+      LoggerStore.read (t "Logger") ["--"] >>= function
       | Some value -> C.log_s console (blue "Git stored in Logger: %s" value)
       | None -> C.log_s console (red "No items have been created.")
     in
 
-    let local_port = (Key_gen.port ()) in
-    S.listen_udpv4 s ~port:local_port begin fun ~src ~dst ~src_port buf ->
+    let local_port = Key_gen.port () in
+    let callback ~src ~dst ~src_port buf =
       match Ptime.of_date_time (timestamp_now ()) with
+      | None -> C.log_s console (red "Failed / Invalid timestamp: %s" (Cstruct.to_string buf))
       | Some ts ->
-        let ctx = {
-          timestamp = ts;
-          Syslog_message.hostname = (Ipaddr.V4.to_string src);
-          set_hostname = false
-        }
+        let ctx = Syslog_message.({
+            timestamp = ts;
+            hostname = (Ipaddr.V4.to_string src);
+            set_hostname = false
+          })
         in
-        begin
-          match Syslog_message.parse ~ctx (Cstruct.to_string buf) with
-          | None -> C.log_s console (red "Failed: %s" (Cstruct.to_string buf))
-          | Some msg ->
+        match Syslog_message.decode ~ctx (Cstruct.to_string buf) with
+        | None -> C.log_s console (red "Failed: %s" (Cstruct.to_string buf))
+        | Some msg ->
               (*
                   TODO: Think about format here... should it be raw buffer,
                         or structured JSON format? Who should be the commiter?
                         What should the commit message be? Is there other
                         metadata that should be associated with the commit?
               *)
-            log_message msg >>
-            C.log_s console (green "%s" (Syslog_message.pp_string msg))
-        end
-      | None -> C.log_s console (red "Failed / Invalid timestamp: %s" (Cstruct.to_string buf))
-    end;
+          log_message msg >>= fun () ->
+          C.log_s console (green "%s" (Syslog_message.to_string msg))
+    in
+    S.listen_udpv4 s ~port:local_port callback ;
     S.listen s
 end

@@ -8,12 +8,14 @@ let port =
   let doc = Key.Arg.info ~doc:"Listening port" ["p" ; "port" ] in
     Key.(create "port" Arg.(opt ~stage:`Both int 514 doc))
 
+let packages = ["syslog-message"; "irmin"; "lwt"; "decompress"; "mirage-git"]
+and libraries = ["syslog-message"; "irmin"; "irmin.git"; "irmin.mirage"; "irmin.mem"; "decompress"]
+
 let main =
   foreign
+    ~libraries ~packages
     ~keys:[Key.abstract port]
     "Unikernel.Main" (console @-> stackv4 @-> clock @-> resolver @-> conduit @-> job)
 
 let () =
-  add_to_opam_packages["syslog-message"; "irmin"; "lwt"; "decompress"; "mirage-git"];
-  add_to_ocamlfind_libraries["syslog-message"; "irmin"; "irmin.git"; "irmin.mirage"; "irmin.mem"; "lwt.ppx"; "decompress"];
   register "syslogd" [main $ default_console $ stack $ default_clock $res_dns $ conduit_d]
